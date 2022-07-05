@@ -6,50 +6,75 @@ import cls from 'classnames';
 
 import styles from '../../styles/coffe-store.module.css';
 
-import CoffeeStoreData from '../../data/coffee-stores.json';
 import { fetchCoffeeStores } from '../../lib/coffee-stores';
+import { useContext, useEffect, useState } from 'react';
+import { StoreContext } from '../../store/store-context';
+import { isEmpty } from '../../utils';
 
-export async function getStaticProps({ params }) {
-  const data = await fetchCoffeeStores();
+export async function getStaticProps(staticProps) {
+  const params = staticProps.params;
+  const coffeeStores = await fetchCoffeeStores();
+
+  const findCoffeeStoreById = coffeeStores.find((coffeeStore) => {
+    return coffeeStore.id.toString() === params.id; //dynamic id
+  });
 
   return {
     props: {
-      // here we check the string id to our params id
-      coffeeStores: data.find((el) => el.id.toString() === params.id),
+      coffeeStore: findCoffeeStoreById ? findCoffeeStoreById : {},
     },
   };
 }
 
 export async function getStaticPaths() {
-  const data = await fetchCoffeeStores();
+  const coffeeStores = await fetchCoffeeStores();
 
-  const paths = data.map((el) => {
+  const paths = coffeeStores.map((coffeeStore) => {
     return {
-      params: { id: el.id.toString() },
+      params: {
+        id: coffeeStore.id.toString(),
+      },
     };
   });
 
   return {
     paths,
-    //? NOTES: fallback: false means that if the path is not found we will fallback to the default 404 page,
     fallback: true,
   };
 }
 
 const CoffeeStore = (props) => {
+  const [coffeeStore, setCoffeeStore] = useState(props.coffeeStore);
   const router = useRouter();
+  const {
+    state: { coffeeStores },
+  } = useContext(StoreContext);
+
+  const id = router.query.id;
+
+  useEffect(() => {
+    if (isEmpty(props.coffeeStore)) {
+      if (coffeeStores.length > 0) {
+        const findCoffeeStoreById = coffeeStores.find((coffeeStore) => {
+          return coffeeStore.id.toString() === id; //dynamic id
+        });
+        setCoffeeStore(findCoffeeStoreById);
+      }
+    }
+  }, [id]);
 
   if (router.isFallback) {
-    return <div>Loading ....</div>;
+    return <div>Loading...</div>;
   }
 
-  const { name, location, imgUrl, votingCount } = props.coffeeStores;
+  const { name, address, neighbourhood, imgUrl } = coffeeStore;
+
+  const handleUpvoteButton = () => {};
 
   return (
     <div className={styles.layout}>
       <Head>
         <title>{name}</title>
-        <meta name='description' content={`${name} coffee store`} />
       </Head>
       <div className={styles.container}>
         <div className={styles.col1}>
@@ -74,27 +99,24 @@ const CoffeeStore = (props) => {
         </div>
 
         <div className={cls('glass', styles.col2)}>
-          {location.address && (
+          {address && (
             <div className={styles.iconWrapper}>
-              <Image src='/static/icons/places.svg' width='24' height='24' alt='places icon' />
-              <p className={styles.text}>{location.address}</p>
+              <Image src='/static/icons/places.svg' width='24' height='24' />
+              <p className={styles.text}>{address}</p>
             </div>
           )}
-          {location.neighborhood && (
+          {neighbourhood && (
             <div className={styles.iconWrapper}>
-              <Image src='/static/icons/nearMe.svg' width='24' height='24' alt='near me icon' />
-              <p className={styles.text}>{location.neighborhood}</p>
+              <Image src='/static/icons/nearMe.svg' width='24' height='24' />
+              <p className={styles.text}>{neighbourhood}</p>
             </div>
           )}
           <div className={styles.iconWrapper}>
-            <Image src='/static/icons/star.svg' width='24' height='24' alt='star icon' />
-            <p className={styles.text}>5{votingCount}</p>
+            <Image src='/static/icons/star.svg' width='24' height='24' />
+            <p className={styles.text}>1</p>
           </div>
 
-          <button
-            className={styles.upvoteButton}
-            //  onClick={handleUpvoteButton}
-          >
+          <button className={styles.upvoteButton} onClick={handleUpvoteButton}>
             Up vote!
           </button>
         </div>
